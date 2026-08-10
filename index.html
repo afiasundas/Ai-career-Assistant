@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Red Pen — AI Career Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Caveat:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EDEFEA;
+    --paper-2: #E3E6DE;
+    --ink: #1B2A41;
+    --ink-soft: #4A5A70;
+    --red: #C1443D;
+    --red-soft: #E7B3AE;
+    --mustard: #D9A63F;
+    --line: rgba(27,42,65,0.14);
+    --shadow: 0 18px 40px rgba(27,42,65,0.14);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+    font-family:'IBM Plex Sans', sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+  }
+  .grain{
+    position:fixed; inset:0; pointer-events:none; opacity:.05; mix-blend-mode:multiply;
+    background-image: radial-gradient(circle at 1px 1px, #000 1px, transparent 0);
+    background-size: 4px 4px;
+  }
+  header{
+    padding: 48px 24px 20px;
+    text-align:center;
+    position:relative;
+  }
+  .stamp{
+    display:inline-block;
+    font-family:'Special Elite', monospace;
+    font-size: 13px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--red);
+    border: 2px solid var(--red);
+    padding: 5px 14px;
+    border-radius: 3px;
+    transform: rotate(-2deg);
+    margin-bottom: 18px;
+  }
+  h1{
+    font-family:'Special Elite', monospace;
+    font-weight:400;
+    font-size: clamp(30px, 5vw, 52px);
+    margin: 0 0 10px;
+    letter-spacing: 0.5px;
+  }
+  header p{
+    color: var(--ink-soft);
+    font-size: 16px;
+    max-width: 520px;
+    margin: 0 auto;
+    line-height:1.5;
+  }
+  .tabs{
+    display:flex; justify-content:center; gap:10px;
+    margin: 30px auto 0;
+    flex-wrap:wrap;
+  }
+  .tab{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 13px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    padding: 10px 20px;
+    border-radius: 999px;
+    border: 1.5px solid var(--line);
+    background: rgba(255,255,255,0.5);
+    cursor:pointer;
+    color: var(--ink-soft);
+    transition: all .2s ease;
+  }
+  .tab.active{
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  main{
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 40px 24px 100px;
+  }
+  .panel{ display:none; }
+  .panel.active{ display:block; animation: fade .35s ease; }
+  @keyframes fade{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+
+  .sheet{
+    background:#fff;
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    padding: 32px;
+    position: relative;
+    border: 1px solid var(--line);
+  }
+  .sheet::before{
+    content:'';
+    position:absolute; left:0; top:0; bottom:0; width:44px;
+    background: repeating-linear-gradient(
+      to bottom, transparent, transparent 27px, var(--line) 27px, var(--line) 28px
+    );
+    opacity:.5;
+    display:none;
+  }
+  label{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+    text-transform:uppercase;
+    letter-spacing: 1.5px;
+    color: var(--ink-soft);
+    margin-bottom: 10px;
+  }
+  textarea, input[type=text]{
+    width:100%;
+    border: 1.5px solid var(--line);
+    border-radius: 3px;
+    padding: 16px;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    resize: vertical;
+    background: #FCFCFA;
+    color: var(--ink);
+  }
+  textarea:focus, input[type=text]:focus{
+    outline: none;
+    border-color: var(--red);
+  }
+  .btn{
+    margin-top: 18px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: var(--red);
+    color: #fff;
+    border: none;
+    padding: 13px 26px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .btn:hover{ transform: translateY(-1px); box-shadow: 0 8px 18px rgba(193,68,61,0.35); }
+  .btn:active{ transform: translateY(0); }
+
+  /* ---- Grade / results ---- */
+  .results{ margin-top: 34px; display:none; }
+  .results.show{ display:block; }
+  .grade-row{
+    display:flex; align-items:center; gap:26px; flex-wrap:wrap;
+    margin-bottom: 26px;
+  }
+  .grade-circle{
+    width: 92px; height: 92px;
+    border-radius: 50%;
+    border: 4px solid var(--red);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Special Elite', monospace;
+    font-size: 30px;
+    color: var(--red);
+    transform: rotate(-6deg);
+    flex-shrink:0;
+    position:relative;
+  }
+  .grade-note{
+    font-family:'Caveat', cursive;
+    font-size: 26px;
+    color: var(--red);
+    max-width: 420px;
+    line-height:1.25;
+  }
+  .annotation{
+    display:flex; gap:14px;
+    padding: 14px 0;
+    border-top: 1px dashed var(--line);
+  }
+  .annotation:first-of-type{ border-top:none; }
+  .mark{
+    font-family:'Caveat', cursive;
+    font-size: 22px;
+    font-weight:700;
+    flex-shrink:0;
+    width: 26px; height:26px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .mark.good{ color:#3F7A55; }
+  .mark.warn{ color: var(--mustard); }
+  .mark.bad{ color: var(--red); }
+  .annotation-text b{ display:block; font-family:'IBM Plex Sans'; font-weight:600; font-size:14.5px; margin-bottom:2px; }
+  .annotation-text span{ color: var(--ink-soft); font-size: 14px; line-height:1.5; }
+
+  .metrics{
+    display:grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr));
+    gap: 14px; margin-top: 28px;
+  }
+  .metric{
+    border: 1px solid var(--line); border-radius:4px; padding: 14px;
+    text-align:center; background: #FCFCFA;
+  }
+  .metric .num{ font-family:'IBM Plex Mono', monospace; font-size: 22px; font-weight:600; color: var(--ink); }
+  .metric .lab{ font-size: 11px; text-transform:uppercase; letter-spacing: .8px; color: var(--ink-soft); margin-top:4px; }
+
+  /* ---- Interview questions ---- */
+  .q-group{ margin-top: 26px; }
+  .q-group h3{
+    font-family:'Special Elite', monospace; font-weight:400; font-size:17px;
+    color: var(--red); margin-bottom: 12px; letter-spacing:.5px;
+  }
+  .q-item{
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--mustard);
+    border-radius: 3px;
+    margin-bottom: 10px;
+    background: #FCFCFA;
+    font-size: 15px;
+    line-height:1.5;
+  }
+  footer{
+    text-align:center; padding: 30px; color: var(--ink-soft); font-size: 13px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  @media (max-width:600px){
+    .sheet{ padding:22px; }
+    .grade-row{ gap:16px; }
+  }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<header>
+  <div class="stamp">Reviewed &amp; Marked Up</div>
+  <h1>Red Pen</h1>
+  <p>An AI-flavored career assistant that grades your resume like a strict but fair editor, then preps you with interview questions tailored to the role.</p>
+  <div class="tabs">
+    <div class="tab active" data-tab="resume">Resume Review</div>
+    <div class="tab" data-tab="interview">Interview Prep</div>
+  </div>
+</header>
+
+<main>
+  <!-- RESUME PANEL -->
+  <section class="panel active" id="panel-resume">
+    <div class="sheet">
+      <label for="resumeInput">Paste your resume text</label>
+      <textarea id="resumeInput" rows="10" placeholder="Paste the full text of your resume here..."></textarea>
+      <button class="btn" id="gradeBtn">Mark it up</button>
+
+      <div class="results" id="resumeResults">
+        <div class="grade-row">
+          <div class="grade-circle" id="gradeCircle">--</div>
+          <div class="grade-note" id="gradeNote">Let's see what we're working with.</div>
+        </div>
+        <div id="annotations"></div>
+        <div class="metrics" id="metrics"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INTERVIEW PANEL -->
+  <section class="panel" id="panel-interview">
+    <div class="sheet">
+      <label for="roleInput">Job title or a pasted job description</label>
+      <input type="text" id="roleInput" placeholder="e.g. AI-First Developer / Vibe Coder">
+      <button class="btn" id="genBtn">Generate questions</button>
+
+      <div class="results" id="interviewResults"></div>
+    </div>
+  </section>
+</main>
+
+<footer>made with a red pen and a bit of logic — no data leaves your browser</footer>
+
+<script>
+  // Tabs
+  document.querySelectorAll('.tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-'+tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ---- Resume grading heuristics ----
+  const ACTION_VERBS = ['led','built','created','developed','designed','launched','managed','improved','increased','reduced','implemented','automated','optimized','delivered','shipped','architected','drove','achieved','solved','scaled'];
+  const BUZZWORDS = ['synergy','hardworking','team player','go-getter','detail-oriented','results-driven','think outside the box','dynamic'];
+
+  document.getElementById('gradeBtn').addEventListener('click', ()=>{
+    const text = document.getElementById('resumeInput').value.trim();
+    const resultsEl = document.getElementById('resumeResults');
+    if(!text){
+      resultsEl.classList.remove('show');
+      alert('Paste some resume text first — even a rough draft works.');
+      return;
+    }
+    const lower = text.toLowerCase();
+    const words = text.split(/\s+/).filter(Boolean);
+    const wordCount = words.length;
+
+    const hasEmail = /[\w.-]+@[\w.-]+\.\w+/.test(text);
+    const hasPhone = /(\+?\d[\d\s\-\(\)]{7,}\d)/.test(text);
+    const hasNumbers = (text.match(/\b\d+%|\b\d+[kKmM]?\+|\$\d+/g) || []).length;
+    const actionCount = ACTION_VERBS.filter(v => lower.includes(v)).length;
+    const buzzCount = BUZZWORDS.filter(b => lower.includes(b)).length;
+    const hasEducation = /(education|university|bachelor|degree|b\.sc|bs |ms |college)/i.test(text);
+    const hasSkills = /(skills|technologies|tools)/i.test(text);
+    const hasExperience = /(experience|worked|internship|employment)/i.test(text);
+
+    let score = 40;
+    if(hasEmail) score += 8;
+    if(hasPhone) score += 6;
+    if(hasEducation) score += 8;
+    if(hasSkills) score += 8;
+    if(hasExperience) score += 8;
+    score += Math.min(actionCount * 3, 15);
+    score += Math.min(hasNumbers * 2, 10);
+    score -= Math.min(buzzCount * 4, 12);
+    if(wordCount < 80) score -= 10;
+    if(wordCount > 900) score -= 8;
+    score = Math.max(10, Math.min(98, Math.round(score)));
+
+    document.getElementById('gradeCircle').textContent = score;
+    const notes = [
+      [90,"Sharp. This reads like someone who ships."],
+      [75,"Solid draft — a few edits and it's strong."],
+      [55,"Good bones. Needs sharper proof of impact."],
+      [0,"Let's rebuild this together, line by line."]
+    ];
+    document.getElementById('gradeNote').textContent = notes.find(n=>score>=n[0])[1];
+
+    const anns = [];
+    anns.push(hasEmail
+      ? {t:'good', title:'Contact info found', d:'Email is present — recruiters can reach you.'}
+      : {t:'bad', title:'No email detected', d:'Add a clear email address near the top.'});
+    anns.push(hasPhone
+      ? {t:'good', title:'Phone number found', d:'Good — makes you easy to reach.'}
+      : {t:'warn', title:'No phone number detected', d:'Consider adding one, especially for local roles.'});
+    anns.push(actionCount >= 4
+      ? {t:'good', title:`${actionCount} strong action verbs`, d:'You are describing what you did, not just where you were.'}
+      : {t:'warn', title:'Weak on action verbs', d:'Start bullet points with verbs like "built", "led", "shipped" instead of "responsible for".'});
+    anns.push(hasNumbers >= 2
+      ? {t:'good', title:'Quantified impact', d:'Numbers and percentages make claims believable.'}
+      : {t:'bad', title:'Missing numbers', d:'Add metrics — "%", time saved, users reached, revenue, anything measurable.'});
+    anns.push(hasSkills
+      ? {t:'good', title:'Skills section present', d:'Easy for a recruiter to scan your stack.'}
+      : {t:'warn', title:'No clear skills section', d:'Add a dedicated line listing your core tools and technologies.'});
+    if(buzzCount > 0){
+      anns.push({t:'bad', title:'Buzzword detected', d:'Phrases like "results-driven" or "team player" are filler — replace with proof.'});
+    }
+    anns.push(wordCount < 80
+      ? {t:'bad', title:'Too short', d:'This reads thin. Add specific projects and outcomes.'}
+      : (wordCount > 900 ? {t:'warn', title:'Getting long', d:'Trim to the most relevant, recent, and impressive material.'} : {t:'good', title:'Good length', d:'Not too sparse, not bloated.'}));
+
+    const iconFor = t => t==='good' ? '✓' : (t==='warn' ? '~' : '✗');
+    document.getElementById('annotations').innerHTML = anns.map(a => `
+      <div class="annotation">
+        <div class="mark ${a.t}">${iconFor(a.t)}</div>
+        <div class="annotation-text"><b>${a.title}</b><span>${a.d}</span></div>
+      </div>
+    `).join('');
+
+    document.getElementById('metrics').innerHTML = `
+      <div class="metric"><div class="num">${wordCount}</div><div class="lab">Words</div></div>
+      <div class="metric"><div class="num">${actionCount}</div><div class="lab">Action verbs</div></div>
+      <div class="metric"><div class="num">${hasNumbers}</div><div class="lab">Metrics used</div></div>
+      <div class="metric"><div class="num">${score}</div><div class="lab">Overall score</div></div>
+    `;
+    resultsEl.classList.add('show');
+  });
+
+  // ---- Interview question generator ----
+  const TOPIC_BANK = {
+    'ai': ['Walk me through how you would evaluate whether an AI tool is production-ready versus just a demo.', 'How do you handle a situation where an AI-generated suggestion is wrong or misleading?', 'Describe a time you used an AI tool to speed up your work — what did you check before trusting the output?'],
+    'developer': ['Tell me about a bug that took you a long time to track down. What was your process?', 'How do you decide when to write code by hand versus generate it with a tool?', 'Describe your approach to reviewing code you did not write yourself.'],
+    'design': ['Walk me through your design process from brief to final delivery.', 'How do you handle feedback that conflicts with your design instincts?'],
+    'data': ['How do you validate that a dataset is clean enough to build on?', 'Tell me about a time your analysis changed a decision.'],
+    'marketing': ['How do you measure whether a campaign actually worked?', 'Describe a time you had to change strategy mid-campaign.'],
+    'management': ['Tell me about a time you had to deliver difficult feedback.', 'How do you prioritize when everything feels urgent?'],
+    'sales': ['Walk me through how you handle a prospect who has gone quiet.', 'Tell me about your toughest "no" and what you learned from it.']
+  };
+  const GENERIC = [
+    'Tell me about a project you are most proud of, and what made it hard.',
+    'Describe a time you disagreed with a teammate. How did you resolve it?',
+    'What is something you learned recently that changed how you work?',
+    'Tell me about a time you missed a deadline. What happened?',
+    'How do you stay current in your field?'
+  ];
+
+  document.getElementById('genBtn').addEventListener('click', ()=>{
+    const role = document.getElementById('roleInput').value.trim();
+    const box = document.getElementById('interviewResults');
+    if(!role){
+      alert('Enter a job title or paste a short job description first.');
+      return;
+    }
+    const lower = role.toLowerCase();
+    let matched = [];
+    Object.keys(TOPIC_BANK).forEach(key=>{
+      if(lower.includes(key)) matched.push(...TOPIC_BANK[key]);
+    });
+    if(matched.length === 0){
+      // loose matches for common synonyms
+      if(/(code|coder|coding|software|engineer|vibe)/.test(lower)) matched.push(...TOPIC_BANK['developer']);
+      if(/(ai|ml|machine learning|llm|automation)/.test(lower)) matched.push(...TOPIC_BANK['ai']);
+    }
+    const technical = matched.length ? [...new Set(matched)] : GENERIC.slice(0,3);
+    const behavioral = GENERIC.slice(0, 4);
+
+    box.innerHTML = `
+      <div class="q-group">
+        <h3>Role-specific questions</h3>
+        ${technical.map(q=>`<div class="q-item">${q}</div>`).join('')}
+      </div>
+      <div class="q-group">
+        <h3>Behavioral questions</h3>
+        ${behavioral.map(q=>`<div class="q-item">${q}</div>`).join('')}
+      </div>
+      <div class="q-group">
+        <h3>Ask them back</h3>
+        <div class="q-item">What does success look like in this role after 90 days?</div>
+        <div class="q-item">What tools or AI workflows does the team already rely on day to day?</div>
+      </div>
+    `;
+    box.classList.add('show');
+  });
+</script>
+</body>
+</html>
